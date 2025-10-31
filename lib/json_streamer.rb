@@ -8,6 +8,7 @@ require_relative "json_streamer/saj_array_handler"
 require_relative "json_streamer/saj_header_handler"
 require_relative "json_streamer/version"
 
+# JsonStreamer - Memory-efficient JSON file processing for large datasets
 module JsonStreamer
   class Error < StandardError; end
 
