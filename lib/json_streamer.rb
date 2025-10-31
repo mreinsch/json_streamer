@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'oj'
+require 'pathname'
 require_relative "json_streamer/builder"
 require_relative "json_streamer/condition"
 require_relative "json_streamer/header_condition"
@@ -10,7 +11,11 @@ require_relative "json_streamer/version"
 
 # JsonStreamer - Memory-efficient JSON file processing for large datasets
 module JsonStreamer
+  extend self
+
   class Error < StandardError; end
+
+  class UnsupportedDateFile < StandardError; end
 
   # Internal exception used to abort parsing early when header is found
   class HeaderFound < StandardError; end
@@ -23,12 +28,12 @@ module JsonStreamer
   # @param nesting_level [Integer, nil] Capture array items at specific nesting depth (e.g., 1 for top-level array)
   # @param key [String, nil] Capture array from specific hash key
   # @return [Enumerator::Lazy] Lazy enumerator of parsed JSON objects
-  def self.load(data_file, nesting_level: nil, key: nil)
+  def load(data_file, nesting_level: nil, key: nil)
     Enumerator.new do |yielder|
       handler = SajArrayHandler.new(nesting_level:, key:, yielder:)
       parser = Oj::Parser.new(:saj)
       parser.handler = handler
-      parser.file(data_file.to_s)
+      parser.file(ruby_file_to_str(data_file))
     end.lazy
   end
 
@@ -38,17 +43,28 @@ module JsonStreamer
   # @param data_file [String, Pathname] Path to the JSON file
   # @param key [String] The top-level key to extract
   # @return [Object] The extracted value (string, number, array, hash, etc.)
-  def self.extract_header(data_file, key:)
+  def extract_header(data_file, key:)
     handler = SajHeaderExtractor.new(target_key: key)
     parser = Oj::Parser.new(:saj)
     parser.handler = handler
 
     begin
-      parser.file(data_file.to_s)
+      parser.file(ruby_file_to_str(data_file))
     rescue HeaderFound
       # Header found - parsing aborted early (this is expected)
     end
 
     handler.result
+  end
+
+  private
+
+  def ruby_file_to_str(data_file)
+    case data_file
+    when File then data_file.path || raise(UnsupportedDateFile, 'File without path is not supported')
+    when Pathname then data_file.to_s
+    when String then data_file
+    else raise UnsupportedDateFile, "date_file should be String, File or Pathname"
+    end
   end
 end
