@@ -12,6 +12,9 @@ require_relative "json_streamer/version"
 module JsonStreamer
   class Error < StandardError; end
 
+  # Internal exception used to abort parsing early when header is found
+  class HeaderFound < StandardError; end
+
   # Load a JSON file using streaming SAJ parser
   # Returns a lazy enumerator that yields objects from the JSON structure without
   # loading the entire file or array into memory at once
@@ -30,7 +33,7 @@ module JsonStreamer
   end
 
   # Extract a single top-level key from a JSON file using streaming parser
-  # Avoids loading large arrays when extracting scalar header values
+  # Stops parsing immediately after the header is extracted to avoid processing the entire file
   #
   # @param data_file [String, Pathname] Path to the JSON file
   # @param key [String] The top-level key to extract
@@ -39,7 +42,13 @@ module JsonStreamer
     handler = SajHeaderExtractor.new(target_key: key)
     parser = Oj::Parser.new(:saj)
     parser.handler = handler
-    parser.file(data_file.to_s)
+
+    begin
+      parser.file(data_file.to_s)
+    rescue HeaderFound
+      # Header found - parsing aborted early (this is expected)
+    end
+
     handler.result
   end
 end

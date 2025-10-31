@@ -42,5 +42,9 @@ module JsonStreamer
       @capturing = false
       @root_level = true
     end
+
+    def extraction_complete?
+      @found && !@capturing && @root_level
+    end
   end
 end

@@ -3,6 +3,7 @@
 module JsonStreamer
   # Oj SAJ (Simple API for JSON) handler for extracting a single top-level key from JSON
   # Properly handles nested hashes and arrays within the extracted value
+  # Raises HeaderFound exception to abort parsing early once extraction is complete
   class SajHeaderExtractor
     attr_reader :result
 
@@ -11,10 +12,6 @@ module JsonStreamer
       @result = nil
       @builder = Builder.new
       @condition = HeaderCondition.new(target_key:)
-    end
-
-    def found
-      @condition.found
     end
 
     def hash_start(key)
@@ -34,6 +31,9 @@ module JsonStreamer
 
       @builder.end_container
       @condition.container_ended(@builder)
+
+      # If we've finished capturing the root-level value, abort parsing
+      raise HeaderFound if @condition.extraction_complete?
     end
 
     def array_start(key)
@@ -53,6 +53,9 @@ module JsonStreamer
 
       @builder.end_container
       @condition.container_ended(@builder)
+
+      # If we've finished capturing the root-level value, abort parsing
+      raise HeaderFound if @condition.extraction_complete?
     end
 
     # Oj SAJ callback - receives value with key context
@@ -61,6 +64,9 @@ module JsonStreamer
       if @condition.should_capture_value?(key)
         @result = value
         @condition.start_capturing
+
+        # Scalar value captured - abort parsing immediately
+        raise HeaderFound
       elsif @condition.capturing?
         @builder.add_value(value, key)
       end
