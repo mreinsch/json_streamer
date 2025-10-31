@@ -1,28 +1,36 @@
 # JsonStreamer
 
-TODO: Delete this and the text below, and describe your gem
+JsonStreamer - Memory-efficient JSON file processing for large datasets
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/json_streamer`. To experiment with that code, run `bin/console` for an interactive prompt.
+This gem is inspired by https://github.com/thisismydesign/json-streamer.
 
-## Installation
+This implementation is backed by [Oj](https://github.com/ohler55/oj) and provides streaming parsing of JSON files using Oj's SAJ (Simple API for JSON) parser.
+Unlike traditional JSON parsers that load the entire document into memory, this implementation:
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+1. Reads files in chunks using Oj::Parser#file (internally buffered)
+2. Processes events as they occur (hash_start, array_start, add_value, etc.)
+3. Never builds complete data structures for the entire document
+4. Yields individual array items one at a time through an Enumerator
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-```
-
-If bundler is not being used to manage dependencies, install the gem by executing:
-
-```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
-```
+Memory Efficiency Example:
+- 40 MB JSON file with 50,000 items
+- Traditional parsing: ~40 MB memory increase
+- JsonStreamer: ~5 MB memory increase (12% of file size)
 
 ## Usage
 
-TODO: Write usage instructions here
+```ruby
+# Stream array items from {"items": [{...}, {...}]}
+JsonStreamer.load('data.json', key: 'items').each do |item|
+  process(item)  # Each item processed without loading all items
+end
+
+# Stream top-level array: [{...}, {...}]
+JsonStreamer.load('data.json', nesting_level: 1).each { |item| ... }
+
+# Extract header value without loading large nested arrays
+report_date = JsonStreamer.extract_header('data.json', key: 'reportDate')
+```
 
 ## Development
 
@@ -32,7 +40,7 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/json_streamer.
+Bug reports and pull requests are welcome on GitHub at https://github.com/mreinsch/json_streamer.
 
 ## License
 
