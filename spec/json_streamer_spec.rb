@@ -106,11 +106,14 @@ RSpec.describe JsonStreamer do
     end
 
     context 'with large dataset' do
+      let(:element_count) { 10_000 }
+      let(:filler_data) { 'a' * 1000 }
+
       before do
         temp_file.write('[')
-        1000.times do |i|
+        element_count.times do |i|
           temp_file.write(',') if i > 0
-          temp_file.write({ 'id' => i, 'value' => "item_#{i}" }.to_json)
+          temp_file.write({ 'id' => i, 'value' => "item_#{i}", 'filler' => filler_data }.to_json)
         end
         temp_file.write(']')
         temp_file.rewind
@@ -120,14 +123,14 @@ RSpec.describe JsonStreamer do
         result = described_class.load(temp_file.path, nesting_level: 1)
 
         expect(result.first(5).size).to eq(5)
-        expect(result.first).to eq({ 'id' => 0, 'value' => 'item_0' })
+        expect(result.first).to eq({ 'id' => 0, 'value' => 'item_0', 'filler' => filler_data })
       end
 
       it 'processes all items' do
         count = 0
         described_class.load(temp_file.path, nesting_level: 1).each { count += 1 }
 
-        expect(count).to eq(1000)
+        expect(count).to eq(element_count)
       end
     end
   end

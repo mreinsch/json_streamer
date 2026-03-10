@@ -6,8 +6,8 @@ module JsonStreamer
   # Properly handles nested hashes and arrays within each item
   # Supports both nesting_level and key-based filtering
   class SajArrayHandler
-    def initialize(yielder:, nesting_level: nil, key: nil)
-      @yielder = yielder
+    def initialize(queue:, nesting_level: nil, key: nil)
+      @queue = queue
       @builder = Builder.new
       @condition = Condition.new(target_level: nesting_level, target_key: key)
     end
@@ -26,7 +26,7 @@ module JsonStreamer
       return if @builder.empty?
 
       completed = @builder.end_container
-      @yielder.yield(completed) if @condition.should_yield_item?(@builder)
+      @queue.push(completed) if @condition.should_yield_item?(@builder)
     end
 
     def array_start(key)
