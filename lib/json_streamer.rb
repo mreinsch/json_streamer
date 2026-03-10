@@ -61,6 +61,8 @@ module JsonStreamer
     queue = SizedQueue.new(1)
     producer = start_header_producer(data_file, key:, queue:)
     item = queue.pop
+    # Abort remaining parse if value was already found
+    producer.raise(StopStream) rescue nil unless item.equal?(STREAM_END) # rubocop:disable Style/RescueModifier
     producer.join
     return nil if item.equal?(STREAM_END)
     raise item if item.is_a?(StandardError)
@@ -81,19 +83,26 @@ module JsonStreamer
 
   def start_header_producer(data_file, key:, queue:) # rubocop:disable Metrics/MethodLength
     Thread.new do
+      stop_requested = false
       handler = SajHeaderExtractor.new(target_key: key, queue:)
       parser = Oj::Parser.new(:saj)
       parser.handler = handler
       sent = false
       begin
         parser.file(ruby_file_to_str(data_file))
+      rescue StopStream
+        stop_requested = true
       rescue StandardError => e
         unless handler.done
-          queue.push(e)
-          sent = true
+          begin
+            queue.push(e)
+            sent = true
+          rescue StopStream
+            stop_requested = true
+          end
         end
       ensure
-        queue.push(STREAM_END) unless handler.done || sent
+        queue.push(STREAM_END) unless handler.done || sent || stop_requested
       end
     end
   end
