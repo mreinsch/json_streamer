@@ -18,7 +18,7 @@ module JsonStreamer
   class UnsupportedDateFile < StandardError; end
 
   # Internal exception used to signal producer thread to stop when consumer exits early
-  class StopStream < StandardError; end
+  class StopStream < Exception; end # rubocop:disable Lint/InheritException
 
   # Sentinel object used to signal end-of-stream between producer thread and consumer enumerator
   STREAM_END = Object.new.freeze
@@ -40,7 +40,7 @@ module JsonStreamer
         loop do
           item = queue.pop
           break if item.equal?(STREAM_END)
-          raise item if item.is_a?(Exception)
+          raise item if item.is_a?(StandardError)
           yielder << item
         end
       ensure
@@ -63,7 +63,7 @@ module JsonStreamer
     item = queue.pop
     producer.join
     return nil if item.equal?(STREAM_END)
-    raise item if item.is_a?(Exception)
+    raise item if item.is_a?(StandardError)
 
     item
   end
@@ -109,7 +109,11 @@ module JsonStreamer
       rescue StopStream
         stop_requested = true
       rescue StandardError => e
-        queue.push(e)
+        begin
+          queue.push(e)
+        rescue StopStream
+          stop_requested = true
+        end
       ensure
         queue.push(STREAM_END) unless stop_requested
       end
