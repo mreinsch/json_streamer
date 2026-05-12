@@ -31,5 +31,5 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "oj", "~> 3.16.12"
+  spec.add_dependency "oj", "= 3.16.15" # 3.16.17 breaks streaming
 end
