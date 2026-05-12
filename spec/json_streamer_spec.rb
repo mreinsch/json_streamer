@@ -127,10 +127,9 @@ RSpec.describe JsonStreamer do
       end
 
       it 'processes all items' do
-        count = 0
-        described_class.load(temp_file.path, nesting_level: 1).each { count += 1 }
+        data = described_class.load(temp_file.path, nesting_level: 1).map { |e| e }.to_a
 
-        expect(count).to eq(element_count)
+        expect(data).to eq(Oj.load(temp_file))
       end
     end
   end
