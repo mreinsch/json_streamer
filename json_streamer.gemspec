@@ -31,5 +31,5 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "oj", "= 3.16.15" # 3.16.17 breaks streaming
+  spec.add_dependency "oj", ">= 3.17.1" # 3.16.17 and 3.17.0 have broken saj parser
 end
